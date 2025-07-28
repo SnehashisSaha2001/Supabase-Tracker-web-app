@@ -1,0 +1,3156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tracker App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- IMPORTANT: Removed Google Maps API script -->
+  <style>
+    :root {
+      --primary-color: #0e2a47;
+      --accent-color: #00d4ff;
+      --bg-gradient: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
+      --card-bg: #1e2e3e;
+      --text-light: #f1f1f1;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: var(--bg-gradient);
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    @media (min-width: 768px) {
+      body {
+        flex-direction: row;
+      }
+    }
+    .sidebar {
+      width: 100%;
+      max-width: 220px;
+      background: var(--primary-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+    }
+    .sidebar h2 {
+      margin-bottom: 40px;
+    }
+    .sidebar button {
+      width: 100%;
+      background: var(--accent-color);
+      color: #000;
+      border: none;
+      padding: 12px;
+      margin: 6px 0;
+      font-size: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* NEW CSS: Hide all sidebar buttons except login by default */
+    .sidebar button:not(#loginBtn) {
+      display: none;
+    }
+
+    .main-content {
+      flex-grow: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #2b3d50;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #00d4ff;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
+      background: #324a5f;
+      color: #fff;
+    }
+    button.submit {
+      background: var(--accent-color);
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .employee-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .employee-actions button {
+      background-color: #00d4ff;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #1e2e3e;
+      padding: 30px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      position: relative; /* Added for close button positioning */
+    }
+    .modal-content h3 {
+      margin-top: 0;
+    }
+    .close-modal {
+      position: absolute; /* Position close button */
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+    /* New styles for form-group */
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+    .form-group select.form-control,
+    .form-group input.form-control {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: none;
+      background: #324a5f;
+      color: #fff;
+    }
+    /* Styles for buttons in City Screen */
+    #city .city-actions button {
+      background-color: var(--accent-color); /* Accent color */
+      color: #000; /* Black text */
+      font-weight: bold;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px; /* Spacing between buttons */
+    }
+    #city .city-actions button.add-city {
+      background-color: #28a745; /* A green color for Add City */
+      color: #fff;
+    }
+    #city .city-actions button.search-city {
+      background-color: #007bff; /* A blue color for Search */
+      color: #fff;
+    }
+
+    /* Styles for User Profile Screen */
+    #profile form label {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    #profile form input[type="text"],
+    #profile form input[type="email"],
+    #profile form input[type="password"],
+    #profile form input[type="file"] { /* Added file input styling */
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: none;
+      background: #324a5f;
+      color: #fff;
+    }
+
+    #profile .password-input-container {
+      position: relative;
+      width: 100%;
+    }
+
+    #profile .password-input-container input {
+      padding-right: 40px; /* Make space for the eye icon */
+    }
+
+    #profile .password-input-container .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    #profile button.signup-button {
+      background-color: #28a745; /* Green color for Sign up */
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+
+    .profile-photo-container {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #profile-preview {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent-color);
+      margin-bottom: 10px;
+    }
+    .sidebar .profile-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent-color);
+      margin-bottom: 10px; /* Adjusted margin */
+    }
+    .sidebar .profile-details {
+      text-align: center;
+      margin-bottom: 20px; /* Space before buttons */
+    }
+    .sidebar .profile-details p {
+      margin: 2px 0;
+      font-size: 0.9em;
+      color: var(--text-light);
+    }
+
+    /* State Management specific styles */
+    #state .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    #state .form-group input,
+    #state .form-group select {
+      background: #324a5f;
+      color: #fff;
+      border: none;
+    }
+    #state button[type="submit"] {
+      background: #28a745;
+      color: #fff;
+    }
+    #state button[type="button"] {
+      background: #007bff;
+      color: #fff;
+    }
+    #state table {
+      background: #2b3d50;
+    }
+    #state table th {
+      background: #324a5f;
+      color: var(--text-light);
+    }
+    #state table,
+    #state table th,
+    #state table td {
+      border: 1px solid #00d4ff;
+    }
+
+    /* Custom Alert/Confirm Modal */
+    #customAlertModal, #customConfirmModal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1001; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        justify-content: center;
+        align-items: center;
+    }
+
+    #customAlertModal .modal-content, #customConfirmModal .modal-content {
+        background-color: #1e2e3e;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 300px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    }
+
+    #customAlertModal .modal-content button, #customConfirmModal .modal-content button {
+        background-color: var(--accent-color);
+        color: #000;
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+/* Responsive layout: stack sidebar above content on small screens */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    max-width: 100%;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 10px;
+  }
+
+  .sidebar h2 {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .sidebar button {
+    flex: 1 1 45%;
+    margin: 5px;
+  }
+
+  .sidebar .profile-photo,
+  .sidebar .profile-details {
+    display: none; /* Hide on small screens */
+  }
+
+  .main-content {
+    padding: 15px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  table {
+    border: none;
+  }
+
+  table thead {
+    display: none;
+  }
+
+  table tr {
+    margin-bottom: 15px;
+    border: 1px solid #00d4ff;
+    border-radius: 8px;
+    padding: 10px;
+    background: #2b3d50;
+  }
+
+  table td {
+    position: relative;
+    padding-left: 50%;
+    text-align: left;
+  }
+
+  table td::before {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 45%;
+    white-space: nowrap;
+    font-weight: bold;
+    color: var(--accent-color);
+  }
+
+  /* Specific ::before content for each table */
+  #daily-activity-table-body td:nth-of-type(1)::before { content: "Employee ID:"; }
+  #daily-activity-table-body td:nth-of-type(2)::before { content: "Name:"; } /* NEW */
+  #daily-activity-table-body td:nth-of-type(3)::before { content: "Type:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(4)::before { content: "Date & Time:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(5)::before { content: "Location:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(6)::before { content: "Latitude:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(7)::before { content: "Longitude:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(8)::before { content: "Map:"; } /* Adjusted index */
+  #daily-activity-table-body td:nth-of-type(9)::before { content: "Details:"; } /* Adjusted index */
+
+
+  #followup-table td:nth-of-type(1)::before { content: "Employee ID:"; }
+  #followup-table td:nth-of-type(2)::before { content: "Name:"; } /* NEW */
+  #followup-table td:nth-of-type(3)::before { content: "Subject:"; } /* Adjusted index */
+  #followup-table td:nth-of-type(4)::before { content: "Date & Time:"; } /* Adjusted index */
+  #followup-table td:nth-of-type(5)::before { content: "Note:"; } /* Adjusted index */
+  #followup-table td:nth-of-type(6)::before { content: "Actions:"; } /* Adjusted index */
+
+  #state-table td:nth-of-type(1)::before { content: "State:"; }
+  #state-table td:nth-of-type(2)::before { content: "Actions:"; }
+
+  #city-table td:nth-of-type(1)::before { content: "State:"; }
+  #city-table td:nth-of-type(2)::before { content: "City:"; }
+  #city-table td:nth-of-type(3)::before { content: "Actions:"; }
+
+  #employee-details-table td:nth-of-type(1)::before { content: "Employee ID:"; }
+  #employee-details-table td:nth-of-type(2)::before { content: "Name:"; }
+  #employee-details-table td:nth-of-type(3)::before { content: "Mobile No:"; }
+  #employee-details-table td:nth-of-type(4)::before { content: "Email:"; }
+  #employee-details-table td:nth-of-type(5)::before { content: "Actions:"; }
+
+  #admin-details-table td:nth-of-type(1)::before { content: "Employee ID:"; }
+  #admin-details-table td:nth-of-type(2)::before { content: "Name:"; }
+  #admin-details-table td:nth-of-type(3)::before { content: "Mobile No:"; }
+  #admin-details-table td:nth-of-type(4)::before { content: "Email:"; }
+  #admin-details-table td:nth-of-type(5)::before { content: "Actions:"; }
+
+/* Location map pins */
+#daily-activity-table-body img {
+  vertical-align: middle;
+  margin-right: 5px;
+}
+}
+
+</style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>🚀 Tracker</h2>
+    <img id="sidebar-profile-photo" class="profile-photo" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b480eacc-40ca-4251-4c52-b6c5587b3aa7.png" alt="Profile Photo">
+    <div class="profile-details">
+      <p id="sidebar-employee-name">Employee Name</p>
+      <p id="sidebar-employee-id">EMP-ID</p>
+    </div>
+    <button onclick="showSection('dashboard')">Dashboard</button>
+    <button onclick="showSection('daily-activity')">Daily Activity</button>
+    <button onclick="showSection('followups')">Follow Ups</button>
+    <button onclick="showSection('profile')">User  Profile</button>
+    <button onclick="showSection('employee-management')" id="employeeManagementBtn">Employee Management</button>
+    <button onclick="showSection('admin-profile')" id="adminProfileBtn">Admin Profile</button>
+    <button onclick="confirmLogout()" id="logoutBtn">Logout</button>
+    <button onclick="showSection('login')" id="loginBtn">Login</button>
+  </div>
+
+  <div class="main-content">
+    <section id="login" class="active">
+        <div class="card">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group" id="employee-id-group">
+                    <label for="login-employee-id">Employee ID</label>
+                    <input type="text" id="login-employee-id" class="form-control" placeholder="Enter your Employee ID" required>
+                </div>
+                <div class="form-group" id="admin-username-group" style="display: none;">
+                    <label for="login-admin-username">Admin Username</label>
+                    <input type="text" id="login-admin-username" class="form-control" placeholder="Enter Admin Username (e.g., ADM-YourName)">
+                </div>
+                <!-- NEW: Mobile Number Input -->
+                <div class="form-group" id="mobile-number-group">
+                    <label for="login-mobile-number">Mobile Number</label>
+                    <input type="tel" id="login-mobile-number" class="form-control" placeholder="Enter your mobile number" required>
+                </div>
+                <div class="form-group" id="password-group" style="display: none;">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Enter your password">
+                </div>
+                <div class="form-group">
+                    <label for="login-role">Select Role</label>
+                    <select id="login-role" class="form-control" required>
+                        <option value="">-- Select Role --</option>
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit">Login</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="dashboard">
+      <div class="card">
+        <h2 id="dashboard-welcome-message">Dashboard</h2>
+        <ul>
+          <li><strong>Mark Attendance:</strong> Easily clock in and out with a single tap.</li>
+          <li><strong>Daily Visit Records:</strong> Log your client or field visits.</li>
+          <li><strong>Follow Ups:</strong> Manage daily follow-ups with reminders.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="daily-activity">
+      <div class="card">
+        <h2>📅 DAILY ACTIVITY</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div>
+                <label for="activity-date-filter">Date:</label>
+                <input type="date" id="activity-date-filter" style="max-width: 150px;" onchange="loadDailyActivity()">
+            </div>
+            <div id="employee-filter-container" style="display:none;">
+                <label for="activity-employee-filter">Employee:</label>
+                <select id="activity-employee-filter" style="max-width: 150px;" onchange="loadDailyActivity()">
+                    <!-- Employee IDs will be loaded here for admin -->
+                </select>
+            </div>
+            <div>
+                <label for="activity-search">🔍 Search:</label>
+                <input type="text" id="activity-search" placeholder="Employee name / EmployeeId" style="max-width: 150px;" onkeyup="loadDailyActivity()">
+            </div>
+        </div>
+
+        <div class="employee-actions">
+          <button onclick="markCheckIn()" id="checkInBtn">Check In</button>
+          <button onclick="markCheckOut()" id="checkOutBtn">Check Out</button>
+          <button onclick="exportToExcel('daily-activity')">Export All</button>
+          <!-- Removed Toggle Map button as only Leaflet is used -->
+        </div>
+
+        <div id="location-tracking-status" style="margin: 10px 0; font-weight: bold;">
+            📍 Location Status: <span id="location-status-text">Inactive</span>
+        </div>
+        <div id="current-location" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <div style="flex: 1;">
+                    <strong>Address:</strong> <span id="current-address">Waiting for location...</span><br>
+                    <strong>Latitude:</strong> <span id="latitude">N/A</span><br>
+                    <strong>Longitude:</strong> <span id="longitude">N/A</span><br>
+                    <strong>Accuracy:</strong> <span id="accuracy">N/A</span> meters
+                </div>
+                <div id="map-container" style="flex: 1; height: 200px; border: 1px solid #00d4ff;">
+                    <!-- Only Leaflet map is used now -->
+                    <div id="leaflet-map" style="height: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <h3>──────────────────── Merged Log Table ────────────────────</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Name</th> <!-- NEW COLUMN -->
+              <th>Type</th>
+              <th>Date & Time</th>
+              <th>Location</th>
+              <th>Latitude</th> <!-- New Column -->
+              <th>Longitude</th> <!-- New Column -->
+              <th>Map</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="daily-activity-table-body">
+            <!-- Daily activity data will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="followups">
+      <div class="card">
+        <h2>Follow Ups</h2>
+        <div class="employee-actions">
+          <button onclick="addFollowUpEntry()">Add Follow-Up</button>
+          <button onclick="exportToExcel('followups')">Export to Excel</button>
+        </div>
+        <form id="followup-form">
+          <input type="text" id="followup-subject" placeholder="Subject / Client Name" required>
+          <input type="datetime-local" id="followup-datetime" required>
+          <textarea id="followup-note" placeholder="Reminder Note"></textarea>
+          <button type="submit" class="submit">Save Follow-Up</button>
+        </form>
+        <table style="margin-top:20px">
+          <thead>
+            <tr>
+              <th id="followup-employee-id-header" style="display:none;">Employee ID</th>
+              <th id="followup-employee-name-header" style="display:none;">Name</th> <!-- NEW COLUMN -->
+              <th>Subject</th>
+              <th>Date & Time</th>
+              <th>Note</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="followup-table">
+            <!-- Follow-up data will be loaded here from Local Storage -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="state">
+      <div class="card">
+        <h2>State Management</h2>
+        <form id="state-form">
+          <div class="form-group">
+            <label for="state-name">State Name</label>
+            <input type="text" id="state-name" placeholder="Enter State Name" required class="form-control">
+          </div>
+          <button type="submit" class="submit">Add State</button>
+        </form>
+        <button onclick="exportToExcel('state')" class="submit" style="margin-top: 10px;">Export to Excel</button>
+        <input type="text" id="search-state" placeholder="Search State" class="form-control" style="margin-top: 20px;" onkeyup="searchState()">
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="state-table">
+            <!-- State data will be loaded here from Local Storage -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="city">
+      <div class="card">
+        <h2>City Management</h2>
+        <form id="city-form">
+          <div class="form-group">
+            <label for="state-select">Select State</label>
+            <select id="state-select" class="form-control" required>
+              <option value="">-- Select State --</option>
+              <!-- States will be loaded dynamically here -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="city-name">City Name</label>
+            <input type="text" id="city-name" class="form-control" placeholder="Enter City Name" required>
+          </div>
+          <button type="submit" class="submit">Add City</button>
+        </form>
+        <button onclick="exportToExcel('city')" class="submit" style="margin-top: 10px;">Export to Excel</button>
+        <input type="text" id="search-city" placeholder="Search City" class="form-control" style="margin-top: 20px;" onkeyup="searchCity()">
+        <table style="margin-top:20px">
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>City</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="city-table">
+            <!-- City data will be loaded here from Local Storage -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="profile">
+      <div class="card">
+        <h2>User Profile</h2>
+        <form id="profile-form">
+          <div class="profile-photo-container">
+            <img id="profile-preview" src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/99a20669-ecb4-4325-a970-491b8dac39a9.png" alt="Profile Photo Preview">
+            <label for="upload-photo" style="cursor: pointer; display: block; margin-top: 10px;">Upload Photo</label>
+            <input type="file" id="upload-photo" accept="image/*" style="display: none;">
+          </div>
+
+          <label for="profile-name">Name</label>
+          <input type="text" id="profile-name" placeholder="Enter Your Name">
+
+          <label for="profile-employee-id">Employee ID</label>
+          <input type="text" id="profile-employee-id" placeholder="Enter your Employee ID" readonly>
+
+          <label for="profile-mobile-no">Mobile No</label>
+          <input type="text" id="profile-mobile-no" placeholder="Enter your mobile no">
+
+          <label for="profile-email-id">Email Id</label>
+          <input type="email" id="profile-email-id" placeholder="Email">
+
+          <label for="profile-password">Password</label>
+          <div class="password-input-container">
+            <input type="password" id="profile-password" placeholder="Password">
+            <span class="toggle-password" onclick="togglePasswordVisibility()">&#128065;</span> </div>
+
+          <button type="submit" class="signup-button">Save Profile</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="admin-profile">
+        <div class="card">
+            <h2>Admin Profile Details</h2>
+            <div class="employee-actions">
+                <button onclick="openAddAdminModal()">Add Admin</button> <!-- New button -->
+            </div>
+            <table style="margin-top:20px">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Mobile No</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-details-table">
+                    <!-- Admin data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="employee-management">
+        <div class="card">
+            <h2>Employee Details</h2>
+            <div class="employee-actions">
+                <button onclick="openAddEmployeeModal()">Add Employee</button>
+                <button onclick="exportToExcel('employee-management')" class="submit">Export to Excel</button>
+            </div>
+            <table style="margin-top:20px">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Mobile No</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-details-table">
+                    <!-- Employee data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+  </div>
+
+  <!-- Log Visit Modal (New/Modified) -->
+  <div id="logVisitModal" class="modal">
+    <div class="modal-content">
+      <h3>📝 Log Visit?</h3>
+      <form id="log-visit-form">
+        <input type="hidden" id="log-visit-checkin-id">
+        <label for="log-visit-client">Client Name:</label>
+        <input type="text" id="log-visit-client" placeholder="Client/Company Name" required>
+        <label for="log-visit-purpose">Visit Purpose:</label>
+        <textarea id="log-visit-purpose" placeholder="Purpose / Notes" required></textarea>
+        <label for="log-visit-location">Visit Location:</label>
+        <input type="text" id="log-visit-location" placeholder="Visit Location" required>
+        <div style="display: flex; justify-content: center; margin-top: 20px;">
+            <button type="submit" class="submit">✔️ Submit Visit</button>
+            <button type="button" class="submit" style="background-color: #f44336; margin-left: 10px;" onclick="skipVisit()">Skip Visit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal -->
+  <div id="customAlertModal" class="modal">
+    <div class="modal-content">
+      <p id="alertMessage"></p>
+      <button onclick="closeAlert()">OK</button>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Modal -->
+  <div id="customConfirmModal" class="modal">
+    <div class="modal-content">
+      <p id="confirmMessage"></p>
+      <button id="confirmYes">Yes</button>
+      <button id="confirmNo">No</button>
+    </div>
+  </div>
+
+  <!-- Add Employee Modal -->
+  <div id="addEmployeeModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeAddEmployeeModal()">&times;</span>
+      <h3>Add New Employee</h3>
+      <form id="add-employee-form">
+        <div class="form-group">
+          <label for="new-employee-id">Employee ID (SCS-XXXXXX)</label>
+          <input type="text" id="new-employee-id" pattern="SCS-\d{5,6}" placeholder="SCS-12345 or SCS-123456" title="Format: SCS- followed by 5 or 6 digits" required>
+        </div>
+        <div class="form-group">
+          <label for="new-employee-name">Full Name</label>
+          <input type="text" id="new-employee-name" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+          <label for="new-employee-mobile">Mobile No</label>
+          <input type="tel" id="new-employee-mobile" placeholder="9876543210" required>
+        </div>
+        <div class="form-group">
+          <label for="new-employee-email">Email</label>
+          <input type="email" id="new-employee-email" placeholder="john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="new-employee-password">Password</label>
+          <input type="password" id="new-employee-password" placeholder="Set password" required>
+        </div>
+        <button type="submit" class="submit">Save Employee</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Admin Modal (New) -->
+  <div id="addAdminModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeAddAdminModal()">&times;</span>
+      <h3>Add New Admin</h3>
+      <form id="add-admin-form">
+        <div class="form-group">
+          <label for="new-admin-username">Admin Username (ADM-YourName)</label>
+          <input type="text" id="new-admin-username" pattern="ADM-[A-Za-z\s]+" placeholder="ADM-JohnDoe" title="Format: ADM- followed by letters and spaces" required>
+        </div>
+        <div class="form-group">
+          <label for="new-admin-name">Full Name</label>
+          <input type="text" id="new-admin-name" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+          <label for="new-admin-mobile">Mobile No</label>
+          <input type="tel" id="new-admin-mobile" placeholder="9876543210">
+        </div>
+        <div class="form-group">
+          <label for="new-admin-email">Email</label>
+          <input type="email" id="new-admin-email" placeholder="john@example.com">
+        </div>
+        <div class="form-group">
+          <label for="new-admin-password">Password</label>
+          <input type="password" id="new-admin-password" placeholder="Set password" required>
+        </div>
+        <button type="submit" class="submit">Save Admin</button>
+      </form>
+    </div>
+  </div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- Supabase JS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+  // Supabase connection config
+  const supabaseUrl = 'https://smoapnooceqbreclhrka.supabase.co'; // Replace with your Supabase URL
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtb2Fwbm9vY2VxYnJlY2xocmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNTYxMjIsImV4cCI6MjA2NjkzMjEyMn0.FtXxRLdeBlSD5LZCsxMKUd0mFlS1HFcqA0g-ZG9suz8'; // Replace with your Supabase anon key
+
+  // Create Supabase client
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Global variables for user state
+  let currentUserRole = null; // 'admin' or 'employee'
+  let currentEmployeeId = null; // The employee_id (e.g., SCS-12345, ADM-JohnDoe)
+  let currentProfileId = null; // The UUID of the logged-in user's profile in Supabase
+
+  // Define allowed admin usernames and their common password
+  const adminCommonPassword = "scube@1234"; // Common password for all admins
+
+  // --- Pre-defined Employee Data (with Mobile Numbers from PDF) ---
+  const initialEmployeeData = [
+    { name: "Snehasish Paul", employee_id: "SCS-03318", mobile_no: "8017892062", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Zuber Alam", employee_id: "SCS-01102", mobile_no: "9891377424", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Bharath Kumar TM", employee_id: "SCS-08017", mobile_no: "9844722312", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Shiva Kumarar", employee_id: "SCS-08016", mobile_no: "9611452782", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Tapas Kumar Dinda", employee_id: "SCS-03317", mobile_no: "9804443387", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Gopal Chandra Biswas", employee_id: "SCS-03313", mobile_no: "9432095612", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Saugat Majumdar", employee_id: "SCS-03303", mobile_no: "9831259094", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Chitrarath Senapati", employee_id: "SCS-03306", mobile_no: "9831282190", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Sukhendu Shekhar Mondal", employee_id: "SCS-03316", mobile_no: "7278942388", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Tarun Kumar Paramanik", employee_id: "SCS-03308", mobile_no: "9831650969", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Kartik Ghanta", employee_id: "SCS-03309", mobile_no: "7074099074", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Provat Naskar", employee_id: "SCS-03314", mobile_no: "7044486602", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Ravi", employee_id: "SCS-01103", mobile_no: "9548362042", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Abhilash Sarangi", employee_id: "SCS-067403", mobile_no: "8763523636", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' },
+    { name: "Shubhadarshani Nath", employee_id: "SCS-067404", mobile_no: "7978143152", email_id: "N/A", password: "scube@4321", photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'employee' }
+  ];
+
+  // --- Pre-defined Admin Data (with Mobile Numbers from PDF) ---
+  const initialAdminData = [
+    { name: "Shanti Saran Singh", employee_id: "ADM-S.S Singh", mobile_no: "9831038262", email_id: "N/A", password: adminCommonPassword, photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'admin' },
+    { name: "Sandeep Sarkar", employee_id: "ADM-Sandeep", mobile_no: "9831036858", email_id: "N/A", password: adminCommonPassword, photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'admin' },
+    { name: "Snehashis Saha", employee_id: "ADM-Snehashis", mobile_no: "9330199588", email_id: "N/A", password: adminCommonPassword, photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'admin' },
+    { name: "Komal Gupta", employee_id: "ADM-Komal", mobile_no: "7003045682", email_id: "N/A", password: adminCommonPassword, photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'admin' },
+    { name: "MD Shoaib Raza", employee_id: "ADM-Shoaib", mobile_no: "9831259095", email_id: "N/A", password: adminCommonPassword, photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png', role: 'admin' }
+  ];
+
+  // List of allowed admin usernames (for password check)
+  const allowedAdminUsernames = initialAdminData.map(admin => admin.employee_id);
+
+
+  // Initial load - show login screen
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Pre-populate employee data into Supabase if not already present
+    for (const emp of initialEmployeeData) {
+        const { data, error } = await supabase.from('profiles').select('id').eq('employee_id', emp.employee_id);
+        if (error) {
+            console.error('Error checking existing employee:', error.message);
+        } else if (data.length === 0) {
+            const { error: insertError } = await supabase.from('profiles').insert(emp);
+            if (insertError) {
+                console.error(`Error pre-populating employee ${emp.employee_id}:`, insertError.message);
+            } else {
+                console.log(`Pre-populated profile for employee: ${emp.employee_id}`);
+            }
+        }
+    }
+
+    // Pre-populate admin data into Supabase and always overwrite to ensure consistency
+    for (const admin of initialAdminData) {
+        const { data, error } = await supabase.from('profiles').upsert(admin, { onConflict: 'employee_id' });
+        if (error) {
+            console.error(`Error force-loading admin ${admin.employee_id}:`, error.message);
+        } else {
+            console.log(`Force-loaded admin profile: ${admin.employee_id}`);
+        }
+    }
+
+    // --- Check for persistent login session ---
+    const lastLoggedInRole = localStorage.getItem('lastLoggedInRole');
+    const lastLoggedInEmployeeId = localStorage.getItem('lastLoggedInEmployeeId');
+    const lastLoggedInProfileId = localStorage.getItem('lastLoggedInProfileId');
+
+    if (lastLoggedInRole && lastLoggedInEmployeeId && lastLoggedInProfileId) {
+        currentUserRole = lastLoggedInRole;
+        currentEmployeeId = lastLoggedInEmployeeId;
+        currentProfileId = lastLoggedInProfileId;
+        // Retrieve the full profile to update sidebar details correctly
+        const userProfile = await getUserProfile(currentEmployeeId); // Fetch from Supabase
+        updateSidebarProfile(userProfile.name, userProfile.employee_id, userProfile.photo_url);
+        login(); // Call the login function to set up UI and navigate to appropriate section
+    } else {
+        showSection('login');
+        // The CSS rule `.sidebar button:not(#loginBtn) { display: none; }` now handles initial hiding.
+        // We only need to ensure loginBtn is visible and logoutBtn is hidden.
+        document.getElementById('loginBtn').style.display = 'block';
+        document.getElementById('logoutBtn').style.display = 'none';
+    }
+    // --- END NEW ---
+
+    document.getElementById('login-role').addEventListener('change', function() {
+        const passwordGroup = document.getElementById('password-group');
+        const loginPasswordInput = document.getElementById('login-password');
+        const employeeIdGroup = document.getElementById('employee-id-group');
+        const loginEmployeeIdInput = document.getElementById('login-employee-id');
+        const adminUsernameGroup = document.getElementById('admin-username-group');
+        const loginAdminUsernameInput = document.getElementById('login-admin-username');
+        const mobileNumberGroup = document.getElementById('mobile-number-group');
+        const loginMobileNumberInput = document.getElementById('login-mobile-number');
+
+        if (this.value === 'admin') {
+            if (employeeIdGroup) employeeIdGroup.style.display = 'none';
+            loginEmployeeIdInput.removeAttribute('required');
+            loginEmployeeIdInput.value = '';
+
+            adminUsernameGroup.style.display = 'block';
+            loginAdminUsernameInput.setAttribute('required', 'required');
+
+            mobileNumberGroup.style.display = 'block';
+            loginMobileNumberInput.setAttribute('required', 'required');
+
+            passwordGroup.style.display = 'block';
+            loginPasswordInput.setAttribute('required', 'required');
+        } else if (this.value === 'employee') {
+            if (employeeIdGroup) employeeIdGroup.style.display = 'block';
+            loginEmployeeIdInput.setAttribute('required', 'required');
+            loginAdminUsernameInput.removeAttribute('required');
+            loginAdminUsernameInput.value = '';
+
+            adminUsernameGroup.style.display = 'none';
+
+            mobileNumberGroup.style.display = 'block';
+            loginMobileNumberInput.setAttribute('required', 'required');
+
+            passwordGroup.style.display = 'block';
+            loginPasswordInput.setAttribute('required', 'required');
+        } else { // Default or no role selected
+            if (employeeIdGroup) employeeIdGroup.style.display = 'block';
+            loginEmployeeIdInput.setAttribute('required', 'required');
+            loginAdminUsernameInput.removeAttribute('required');
+            loginAdminUsernameInput.value = '';
+
+            adminUsernameGroup.style.display = 'none';
+
+            mobileNumberGroup.style.display = 'block';
+            loginMobileNumberInput.setAttribute('required', 'required');
+
+            passwordGroup.style.display = 'none';
+            loginPasswordInput.removeAttribute('required');
+            loginPasswordInput.value = '';
+        }
+    });
+
+    document.getElementById('login-role').dispatchEvent(new Event('change'));
+  });
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const employeeIdInput = document.getElementById('login-employee-id').value.trim();
+      const adminUsernameInput = document.getElementById('login-admin-username').value.trim();
+      const passwordInput = document.getElementById('login-password').value;
+      const mobileNumberInput = document.getElementById('login-mobile-number').value.trim();
+      const roleSelect = document.getElementById('login-role').value;
+
+      if (!roleSelect) {
+          showAlert('Please select a Role.');
+          return;
+      }
+
+      const loginData = { employeeIdInput, adminUsernameInput, passwordInput, mobileNumberInput, roleSelect };
+
+      showConfirm('Are you sure you want to log in?', (confirmed) => {
+          if (confirmed) {
+              processLogin(loginData);
+          } else {
+              showAlert('Login cancelled.');
+          }
+      });
+  });
+
+  /**
+   * Checks if an employee ID is authorized to log in.
+   * An employee is authorized if a user profile exists for their ID in Supabase.
+   * @param {string} employeeId The employee ID to check for authorization.
+   * @returns {Promise<boolean>} True if the employee is authorized (profile exists), false otherwise.
+   */
+  async function isEmployeeAuthorized(employeeId) {
+      if (!employeeId || (!employeeId.startsWith('SCS-') && !employeeId.startsWith('ADM-'))) {
+          return false;
+      }
+      const { data, error } = await supabase.from('profiles').select('id').eq('employee_id', employeeId);
+      if (error) {
+          console.error('Error checking employee authorization:', error.message);
+          return false;
+      }
+      return data.length > 0;
+  }
+
+  async function processLogin(loginData) {
+      const { employeeIdInput, adminUsernameInput, passwordInput, mobileNumberInput, roleSelect } = loginData;
+
+      if (roleSelect === 'employee') {
+          if (!employeeIdInput) {
+              showAlert('Please enter Employee ID.');
+              return;
+          }
+          if (!employeeIdInput.startsWith('SCS-')) {
+              showAlert('Employee ID must start with "SCS-" (e.g., SCS-12345 or SCS-123456).');
+              return;
+          }
+
+          const employeeProfile = await getUserProfile(employeeIdInput);
+
+          if (!employeeProfile) {
+              showAlert('Employee ID not authorized. Please check your ID or contact your administrator.');
+              return;
+          }
+
+          if (mobileNumberInput !== employeeProfile.mobile_no) {
+              showAlert('Incorrect mobile number for Employee login.');
+              return;
+          }
+
+          if (passwordInput !== employeeProfile.password) {
+              showAlert('Incorrect password for Employee login.');
+              return;
+          }
+
+          currentUserRole = 'employee';
+          currentEmployeeId = employeeIdInput;
+          currentProfileId = employeeProfile.id; // Store the Supabase profile UUID
+          showAlert(`Employee ${employeeIdInput} login successful!`);
+          login();
+
+      } else if (roleSelect === 'admin') {
+          if (!adminUsernameInput) {
+              showAlert('Please enter Admin Username.');
+              return;
+          }
+
+          const adminProfile = await getUserProfile(adminUsernameInput);
+
+          if (!adminProfile) {
+              showAlert('Admin Username not found. Please check your username or add it via the "Add Admin" feature if you are an existing admin.');
+              return;
+          }
+
+          // For predefined admins, check against the common password and mobile number
+          if (allowedAdminUsernames.includes(adminUsernameInput)) {
+              if (mobileNumberInput !== adminProfile.mobile_no) {
+                  showAlert('Incorrect mobile number for Admin login.');
+                  return;
+              }
+              if (passwordInput !== adminCommonPassword) {
+                  showAlert('Incorrect password for Admin login.');
+                  return;
+              }
+          } else {
+              // For dynamically added admins, check against their specific password and mobile number
+              if (mobileNumberInput !== adminProfile.mobile_no) {
+                  showAlert('Incorrect mobile number for Admin login.');
+                  return;
+              }
+              if (passwordInput !== adminProfile.password) {
+                  showAlert('Incorrect password for Admin login.');
+                  return;
+              }
+          }
+
+          currentEmployeeId = adminUsernameInput;
+          currentUserRole = 'admin';
+          currentProfileId = adminProfile.id; // Store the Supabase profile UUID
+          showAlert(`Admin ${adminUsernameInput} login successful!`);
+          login();
+      }
+  }
+
+  function login() {
+      document.getElementById('loginBtn').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'block';
+      document.querySelectorAll('.sidebar button:not(#loginBtn):not(#logoutBtn)').forEach(btn => btn.style.display = 'block');
+
+      // --- Save session to localStorage ---
+      localStorage.setItem('lastLoggedInRole', currentUserRole);
+      localStorage.setItem('lastLoggedInEmployeeId', currentEmployeeId);
+      localStorage.setItem('lastLoggedInProfileId', currentProfileId); // Store profile UUID
+      // --- END NEW ---
+
+      if (currentUserRole === 'admin') {
+          document.getElementById('employeeManagementBtn').style.display = 'block';
+          document.getElementById('adminProfileBtn').style.display = 'block';
+          showSection('admin-profile');
+          populateEmployeeFilter(); // Populate employee filter for admin
+      } else {
+          document.getElementById('employeeManagementBtn').style.display = 'none';
+          document.getElementById('adminProfileBtn').style.display = 'none';
+          showSection('dashboard');
+      }
+      updateSidebarProfile();
+  }
+
+  function confirmLogout() {
+      showConfirm('Are you sure you want to log out?', (confirmed) => {
+          if (confirmed) {
+              logout();
+          } else {
+              showAlert('Logout cancelled.');
+          }
+      });
+  }
+
+  function logout() {
+      currentUserRole = null;
+      currentEmployeeId = null;
+      currentProfileId = null;
+      stopLocationTracking(); // Ensure location tracking stops on logout
+
+      // --- Clear session from localStorage ---
+      localStorage.removeItem('lastLoggedInRole');
+      localStorage.removeItem('lastLoggedInEmployeeId');
+      localStorage.removeItem('lastLoggedInProfileId');
+      // --- END NEW ---
+
+      showAlert('Logged out successfully!');
+      showSection('login');
+      // The CSS rule `.sidebar button:not(#loginBtn) { display: none; }` now handles initial hiding.
+      // We only need to ensure loginBtn is visible and logoutBtn is hidden.
+      document.getElementById('loginBtn').style.display = 'block';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('sidebar-employee-name').textContent = "Employee Name";
+      document.getElementById('sidebar-employee-id').textContent = "EMP-ID";
+      document.getElementById('sidebar-profile-photo').src = "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b480eacc-40ca-4251-4c52-b6c5587b3aa7.png";
+  }
+
+  const customAlertModal = document.getElementById('customAlertModal');
+  const alertMessage = document.getElementById('alertMessage');
+
+  const customConfirmModal = document.getElementById('customConfirmModal');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmYesButton = document.getElementById('confirmYes');
+  const confirmNoButton = document.getElementById('confirmNo');
+  let confirmCallback = null;
+
+  let watchId = null; // Global variable to hold the watchPosition ID
+
+  function showSection(sectionId) {
+    // Stop location tracking if navigating away from daily-activity
+    if (sectionId !== 'daily-activity') {
+        stopLocationTracking();
+    }
+
+    const restrictedSections = ['dashboard', 'daily-activity', 'followups', 'profile', 'employee-management', 'admin-profile'];
+    if (restrictedSections.includes(sectionId) && !currentUserRole) {
+        showAlert('Please login to access this section.');
+        return;
+    }
+
+    if (sectionId === 'employee-management' && currentUserRole !== 'admin') {
+        showAlert('Access Denied: Only administrators can view employee details.');
+        return;
+    }
+    if (sectionId === 'admin-profile' && currentUserRole !== 'admin') {
+        showAlert('Access Denied: Only administrators can view their profile here.');
+        return;
+    }
+
+    const sections = document.querySelectorAll('.main-content section');
+    sections.forEach(section => {
+      section.classList.remove('active');
+    });
+    document.getElementById(sectionId).classList.add('active');
+
+    if (sectionId === 'dashboard') {
+        document.getElementById('dashboard-welcome-message').textContent = `Welcome, ${currentEmployeeId}!`;
+    } else if (sectionId === 'daily-activity') {
+        // Set today's date as default filter
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('activity-date-filter').value = today;
+
+        // Show/hide employee filter based on role
+        if (currentUserRole === 'admin') {
+            document.getElementById('employee-filter-container').style.display = 'block';
+            populateEmployeeFilter();
+        } else {
+            document.getElementById('employee-filter-container').style.display = 'none';
+        }
+        loadDailyActivity();
+    } else if (sectionId === 'followups') {
+      loadFollowUps();
+    } else if (sectionId === 'state') {
+      loadStates();
+    } else if (sectionId === 'city') {
+      loadStatesForCitySelect();
+      loadCities();
+    } else if (sectionId === 'profile') {
+      loadUserProfile();
+    } else if (sectionId === 'employee-management') {
+        loadEmployeeDetails();
+    } else if (sectionId === 'admin-profile') {
+        loadAdminDetails();
+    }
+  }
+
+  function showAlert(message) {
+    alertMessage.textContent = message;
+    customAlertModal.style.display = 'flex';
+  }
+
+  function closeAlert() {
+    customAlertModal.style.display = 'none';
+  }
+
+  function showConfirm(message, callback) {
+    confirmMessage.textContent = message;
+    confirmCallback = callback;
+    customConfirmModal.style.display = 'flex';
+  }
+
+  confirmYesButton.onclick = () => {
+    if (confirmCallback) {
+      confirmCallback(true);
+    }
+    customConfirmModal.style.display = 'none';
+  };
+
+  confirmNoButton.onclick = () => {
+    if (confirmCallback) {
+      confirmCallback(false);
+    }
+    customConfirmModal.style.display = 'none';
+  };
+
+  function togglePasswordVisibility() {
+    const passwordField = document.getElementById('profile-password');
+    if (passwordField.type === 'password') {
+      passwordField.type = 'text';
+    } else {
+      passwordField.type = 'password';
+    }
+  }
+
+  // No longer needed as Supabase handles UUID generation
+  // function generateUniqueId(prefix = '') {
+  //   const timestampPart = Date.now().toString(36);
+  //   const randomPart = Math.random().toString(36).substr(2, 5);
+  //   return `${prefix}${timestampPart}${randomPart}`.toUpperCase();
+  // }
+
+  function exportToExcel(sectionId) {
+    let tableId;
+    let fileName;
+
+    switch (sectionId) {
+      case 'daily-activity':
+        tableId = 'daily-activity-table-body';
+        fileName = 'Daily_Activity_Records';
+        break;
+      case 'followups':
+        tableId = 'followup-table';
+        fileName = 'FollowUp_Records';
+        break;
+      case 'state':
+        tableId = 'state-table';
+        fileName = 'State_Management';
+        break;
+      case 'city':
+        tableId = 'city-table';
+        fileName = 'City_Management';
+        break;
+      case 'employee-management':
+        tableId = 'employee-details-table';
+        fileName = 'Employee_Details';
+        break;
+      case 'admin-profile':
+        tableId = 'admin-details-table';
+        fileName = 'Admin_Profile';
+        break;
+      default:
+        showAlert('Export not supported for this section.');
+        return;
+    }
+
+    const table = document.getElementById(tableId);
+    if (!table) {
+      showAlert('Table not found for export.');
+      return;
+    }
+
+    let csv = [];
+    const headers = document.querySelector(`#${sectionId} thead tr`).children;
+    let rowData = [];
+    for (let i = 0; i < headers.length; i++) {
+      // Exclude 'Actions' column from export
+      if (headers[i].textContent.trim() !== 'Actions') {
+        rowData.push(headers[i].textContent.trim());
+      }
+    }
+    csv.push(rowData.join(','));
+
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      rowData = [];
+      const cols = row.querySelectorAll('td');
+      cols.forEach((col, index) => {
+        // Exclude the last column (Actions) from export, unless it's the daily-activity table
+        // The daily-activity table doesn't have an actions column, so all columns are included.
+        if (sectionId === 'daily-activity' || index < cols.length - 1) {
+          let cellText = col.textContent.trim();
+          // Handle commas in cell text by enclosing in quotes
+          if (cellText.includes(',')) {
+            cellText = `"${cellText}"`;
+          }
+          rowData.push(cellText);
+        }
+      });
+      csv.push(rowData.join(','));
+    });
+
+    const csvString = csv.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${fileName}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showAlert('Data exported successfully to Excel (CSV)!');
+    } else {
+      showAlert('Your browser does not support downloading files directly. Please copy the data manually.');
+    }
+  }
+
+  // --- Daily Activity (Merged Attendance & Visits) ---
+
+  async function getDailyActivityRecords() {
+    let query = supabase.from('daily_activities').select('*');
+    if (currentUserRole === 'employee') {
+        query = query.eq('profile_id', currentProfileId);
+    }
+    const { data, error } = await query;
+    if (error) {
+        console.error('Error fetching daily activity records:', error.message);
+        showAlert('Error fetching daily activity records.');
+        return [];
+    }
+    return data;
+  }
+
+  // This function is now only for internal use after an insert/update
+  // Data is saved directly via insert/update calls
+  // async function saveDailyActivityRecords(records) {
+  //   // This function is no longer needed as data is directly inserted/updated
+  // }
+
+  async function markCheckIn() {
+    if (!currentProfileId || !currentEmployeeId) {
+        showAlert('Please login to mark attendance.');
+        return;
+    }
+
+    const now = new Date();
+    const today = now.toLocaleDateString();
+    const { data: records, error: fetchError } = await supabase
+        .from('daily_activities')
+        .select('*')
+        .eq('profile_id', currentProfileId)
+        .gte('timestamp', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()) // Start of today
+        .lte('timestamp', new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString()); // End of today
+
+    if (fetchError) {
+        console.error('Error fetching daily activities for check-in:', fetchError.message);
+        showAlert('Error checking previous attendance.');
+        return;
+    }
+
+    const latestCheckIn = records
+        .filter(rec => rec.type === 'Check-In')
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        [0];
+
+    const latestCheckOut = records
+        .filter(rec => rec.type === 'Check-Out')
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        [0];
+
+    if (latestCheckIn && (!latestCheckOut || new Date(latestCheckIn.timestamp) > new Date(latestCheckOut.timestamp))) {
+        showAlert('You are already checked in! Please check out before checking in again.');
+        return;
+    }
+
+    const newCheckInRecord = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId,
+        timestamp: now.toISOString(),
+        type: 'Check-In',
+        location_address: null,
+        location_lat: null,
+        location_lng: null,
+        map_link: null,
+        details: 'Live GPS',
+        check_out_id: null
+    };
+
+    const { data: insertedRecord, error: insertError } = await supabase
+        .from('daily_activities')
+        .insert(newCheckInRecord)
+        .select(); // Select the inserted record to get its ID
+
+    if (insertError) {
+        console.error('Error inserting check-in record:', insertError.message);
+        showAlert('Error marking check-in.');
+        return;
+    }
+
+    localStorage.setItem(`currentCheckInSessionId_${currentProfileId}`, insertedRecord[0].id); // Store the UUID of the current check-in session
+
+    showAlert(`Checked in at ${now.toLocaleTimeString()}`);
+    startLocationTracking(); // Start live location tracking immediately
+    loadDailyActivity(); // Reload table to show new check-in
+
+    // Show Log Visit Modal
+    document.getElementById('log-visit-checkin-id').value = insertedRecord[0].id;
+    document.getElementById('logVisitModal').style.display = 'flex';
+  }
+
+  async function markCheckOut() {
+    if (!currentProfileId || !currentEmployeeId) {
+        showAlert('Please login to mark attendance.');
+        return;
+    }
+
+    const activeCheckInSessionId = localStorage.getItem(`currentCheckInSessionId_${currentProfileId}`);
+    if (!activeCheckInSessionId) {
+        showAlert('You need to check in first!');
+        return;
+    }
+
+    const now = new Date();
+
+    // Fetch the check-in record to link it
+    const { data: checkInRecords, error: checkInError } = await supabase
+        .from('daily_activities')
+        .select('*')
+        .eq('id', activeCheckInSessionId)
+        .eq('profile_id', currentProfileId)
+        .single();
+
+    if (checkInError || !checkInRecords) {
+        console.error('Error fetching active check-in session:', checkInError?.message || 'No active check-in session found.');
+        showAlert('No active check-in session found to check out from.');
+        localStorage.removeItem(`currentCheckInSessionId_${currentProfileId}`);
+        return;
+    }
+
+    const newCheckOutRecord = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId,
+        timestamp: now.toISOString(),
+        type: 'Check-Out',
+        location_address: null,
+        location_lat: null,
+        location_lng: null,
+        map_link: null,
+        details: 'Live GPS',
+        linked_check_in_id: checkInRecords.id // Link check-out to its check-in
+    };
+
+    const { data: insertedCheckOut, error: insertError } = await supabase
+        .from('daily_activities')
+        .insert(newCheckOutRecord)
+        .select();
+
+    if (insertError) {
+        console.error('Error inserting check-out record:', insertError.message);
+        showAlert('Error marking check-out.');
+        return;
+    }
+
+    // Update the check-in record to link to this check-out
+    const { error: updateError } = await supabase
+        .from('daily_activities')
+        .update({ check_out_id: insertedCheckOut[0].id })
+        .eq('id', checkInRecords.id);
+
+    if (updateError) {
+        console.error('Error updating check-in record with check-out ID:', updateError.message);
+        // This is a non-critical error, but log it.
+    }
+
+    localStorage.removeItem(`currentCheckInSessionId_${currentProfileId}`); // Clear the active session ID
+
+    showAlert(`Checked out at ${now.toLocaleTimeString()}`);
+    stopLocationTracking(); // Stop live location tracking
+    loadDailyActivity(); // Reload table to show new check-out
+  }
+
+  document.getElementById('log-visit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const checkInId = document.getElementById('log-visit-checkin-id').value; // This is the UUID of the check-in record
+    const clientName = document.getElementById('log-visit-client').value.trim();
+    const visitPurpose = document.getElementById('log-visit-purpose').value.trim();
+    const visitLocationInput = document.getElementById('log-visit-location').value.trim();
+
+    const currentLat = document.getElementById('latitude').textContent;
+    const currentLng = document.getElementById('longitude').textContent;
+    let currentAddress = document.getElementById('current-address').textContent;
+
+    let visitLocationAddress = null;
+    let visitLocationLat = null;
+    let visitLocationLng = null;
+    let visitMapLink = null;
+
+    if (currentLat !== 'N/A' && currentLng !== 'N/A' && currentAddress !== 'Location tracking inactive') {
+        visitLocationAddress = currentAddress;
+        visitLocationLat = parseFloat(currentLat);
+        visitLocationLng = parseFloat(currentLng);
+        visitMapLink = `https://www.openstreetmap.org/?mlat=${currentLat}&mlon=${currentLng}#map=15/${currentLat}/${currentLng}`;
+    } else {
+        if (visitLocationInput) {
+            try {
+                const geocoded = await reverseGeocode(null, null, visitLocationInput);
+                if (geocoded.address) {
+                    visitLocationAddress = geocoded.address;
+                    visitLocationLat = geocoded.lat;
+                    visitLocationLng = geocoded.lng;
+                    visitMapLink = `https://www.openstreetmap.org/?mlat=${geocoded.lat}&mlon=${geocoded.lng}#map=15/${geocoded.lat}/${geocoded.lng}`;
+                } else {
+                    visitLocationAddress = visitLocationInput;
+                }
+            } catch (error) {
+                console.error("Geocoding manual visit location failed:", error);
+                visitLocationAddress = visitLocationInput;
+            }
+        } else {
+            visitLocationAddress = 'N/A';
+        }
+    }
+
+    const now = new Date();
+
+    const newVisitRecord = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId,
+        timestamp: now.toISOString(),
+        type: 'Visit',
+        location_address: visitLocationAddress,
+        location_lat: visitLocationLat,
+        location_lng: visitLocationLng,
+        map_link: visitMapLink,
+        details: `${clientName} - ${visitPurpose}`,
+        linked_check_in_id: checkInId
+    };
+
+    const { error: insertActivityError } = await supabase
+        .from('daily_activities')
+        .insert(newVisitRecord);
+
+    if (insertActivityError) {
+        console.error('Error logging visit activity:', insertActivityError.message);
+        showAlert('Error logging visit.');
+        return;
+    }
+
+    // Add visit to follow-ups
+    const newFollowUp = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId,
+        subject: `Visit: ${clientName}`,
+        datetime: now.toISOString(),
+        note: `Location: ${visitLocationAddress}\nPurpose: ${visitPurpose}`
+    };
+
+    const { error: insertFollowUpError } = await supabase
+        .from('follow_ups')
+        .insert(newFollowUp);
+
+    if (insertFollowUpError) {
+        console.error('Error adding visit to follow-ups:', insertFollowUpError.message);
+        // This is a non-critical error, but log it.
+    }
+
+    showAlert('Visit logged successfully and added to Follow Ups!');
+    closeLogVisitModal();
+    loadDailyActivity();
+    loadFollowUps();
+  });
+
+  async function skipVisit() {
+    const checkInId = document.getElementById('log-visit-checkin-id').value;
+    const now = new Date();
+
+    const currentLat = document.getElementById('latitude').textContent;
+    const currentLng = document.getElementById('longitude').textContent;
+    const currentAddress = document.getElementById('current-address').textContent;
+
+    let skippedLocationAddress = null;
+    let skippedLocationLat = null;
+    let skippedLocationLng = null;
+    let skippedMapLink = null;
+
+    if (currentLat !== 'N/A' && currentLng !== 'N/A' && currentAddress !== 'Location tracking inactive') {
+        skippedLocationAddress = currentAddress;
+        skippedLocationLat = parseFloat(currentLat);
+        skippedLocationLng = parseFloat(currentLng);
+        skippedMapLink = `https://www.openstreetmap.org/?mlat=${currentLat}&mlon=${currentLng}#map=15/${currentLat}/${currentLng}`;
+    }
+
+    const newSkippedVisitRecord = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId,
+        timestamp: now.toISOString(),
+        type: 'Skipped Visit',
+        location_address: skippedLocationAddress,
+        location_lat: skippedLocationLat,
+        location_lng: skippedLocationLng,
+        map_link: skippedMapLink,
+        details: 'Visit skipped by employee',
+        linked_check_in_id: checkInId
+    };
+
+    const { error } = await supabase
+        .from('daily_activities')
+        .insert(newSkippedVisitRecord);
+
+    if (error) {
+        console.error('Error logging skipped visit:', error.message);
+        showAlert('Error logging skipped visit.');
+        return;
+    }
+
+    showAlert('Visit skipped.');
+    closeLogVisitModal();
+    loadDailyActivity();
+  }
+
+  function closeLogVisitModal() {
+    document.getElementById('logVisitModal').style.display = 'none';
+    document.getElementById('log-visit-form').reset();
+    document.getElementById('log-visit-checkin-id').value = '';
+  }
+
+  async function populateEmployeeFilter() {
+      const employeeFilter = document.getElementById('activity-employee-filter');
+      employeeFilter.innerHTML = '<option value="">All Employees</option>';
+
+      const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('employee_id')
+          .neq('role', 'admin') // Exclude admins
+          .order('employee_id', { ascending: true });
+
+      if (error) {
+          console.error('Error fetching employee profiles for filter:', error.message);
+          return;
+      }
+
+      profiles.forEach(profile => {
+          const option = document.createElement('option');
+          option.value = profile.employee_id;
+          option.textContent = profile.employee_id;
+          employeeFilter.appendChild(option);
+      });
+  }
+
+  async function loadDailyActivity() {
+    if (!currentProfileId) return;
+
+    const selectedDateValue = document.getElementById('activity-date-filter').value;
+    const selectedEmployeeId = document.getElementById('activity-employee-filter')?.value || '';
+    const searchTerm = document.getElementById('activity-search').value.toLowerCase();
+
+    const dailyActivityTableBody = document.getElementById('daily-activity-table-body');
+    dailyActivityTableBody.innerHTML = '';
+
+    let query = supabase.from('daily_activities').select('*');
+
+    if (currentUserRole === 'admin' && selectedEmployeeId) {
+        query = query.eq('employee_id', selectedEmployeeId);
+    } else if (currentUserRole === 'employee') {
+        query = query.eq('profile_id', currentProfileId);
+    }
+
+    if (selectedDateValue) {
+      const startOfDay = new Date(selectedDateValue).toISOString();
+      const endOfDay = new Date(new Date(selectedDateValue).setDate(new Date(selectedDateValue).getDate() + 1)).toISOString();
+      query = query.gte('timestamp', startOfDay).lt('timestamp', endOfDay);
+    }
+
+    const { data: records, error } = await query.order('timestamp', { ascending: false });
+
+    if (error) {
+        console.error('Error loading daily activity:', error.message);
+        showAlert('Error loading daily activity.');
+        return;
+    }
+
+    if (records.length === 0) {
+      dailyActivityTableBody.innerHTML = '<tr><td colspan="9">No daily activity records found</td></tr>';
+      return;
+    }
+
+    // Fetch all profiles once to map employee_id to name
+    const { data: allProfiles, error: profilesError } = await supabase.from('profiles').select('employee_id, name');
+    const profileMap = new Map();
+    if (!profilesError) {
+        allProfiles.forEach(p => profileMap.set(p.employee_id, p.name));
+    }
+
+    const filteredRecords = records.filter(record => {
+        const employeeName = profileMap.get(record.employee_id)?.toLowerCase() || '';
+        return (record.employee_id && record.employee_id.toLowerCase().includes(searchTerm)) ||
+               (employeeName.includes(searchTerm)) ||
+               (record.type && record.type.toLowerCase().includes(searchTerm)) ||
+               (record.location_address && record.location_address.toLowerCase().includes(searchTerm)) ||
+               (record.details && record.details.toLowerCase().includes(searchTerm));
+    });
+
+
+    filteredRecords.forEach(record => {
+      const row = dailyActivityTableBody.insertRow();
+      const recordDateTime = new Date(record.timestamp);
+      const recordDate = recordDateTime.toLocaleDateString();
+      const recordTime = recordDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const employeeName = profileMap.get(record.employee_id) || 'N/A';
+
+      row.insertCell(0).textContent = record.employee_id || 'N/A';
+      row.insertCell(1).textContent = employeeName;
+      row.insertCell(2).textContent = record.type;
+      row.insertCell(3).textContent = `${recordDate} ${recordTime}`;
+
+      const locationCell = row.insertCell(4);
+      const latitudeCell = row.insertCell(5);
+      const longitudeCell = row.insertCell(6);
+
+      if (record.location_address) {
+          locationCell.textContent = record.location_address;
+          latitudeCell.textContent = record.location_lat ? record.location_lat.toFixed(6) : 'N/A';
+          longitudeCell.textContent = record.location_lng ? record.location_lng.toFixed(6) : 'N/A';
+      } else {
+          locationCell.textContent = 'N/A';
+          latitudeCell.textContent = 'N/A';
+          longitudeCell.textContent = 'N/A';
+      }
+
+      const mapCell = row.insertCell(7);
+      if (record.map_link) {
+        mapCell.innerHTML = `<a href="${record.map_link}" target="_blank" style="color: #00d4ff;">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Pushpin_red.svg/1200px-Pushpin_red.svg.png" alt="Map pin" width="20">
+                                View Map
+                             </a>`;
+      } else {
+        mapCell.textContent = 'N/A';
+      }
+
+      const detailsCell = row.insertCell(8);
+      detailsCell.textContent = record.details || 'N/A';
+    });
+  }
+
+  let leafletMap;
+  let leafletMarker;
+
+  /**
+   * Reverse geocodes coordinates to an address using OpenStreetMap Nominatim.
+   * @param {number} lat Latitude.
+   * @param {number} lng Longitude.
+   * @param {string} query Optional: If lat/lng are null, attempts to geocode a text query.
+   * @returns {Promise<object>} A promise that resolves with {address: string, lat: number, lng: number} or an error.
+   */
+  async function reverseGeocode(lat, lng, query = null) {
+      let url;
+      if (lat !== null && lng !== null) {
+          url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+      } else if (query) {
+          url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&limit=1`;
+      } else {
+          return { address: 'N/A', lat: null, lng: null };
+      }
+
+      try {
+          const response = await fetch(url, {
+              headers: {
+                  'User-Agent': 'TrackerApp/1.0 (your-email@example.com)' // Required by Nominatim
+              }
+          });
+          if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+
+          if (lat !== null && lng !== null) { // Reverse geocoding
+              return {
+                  address: data.display_name || 'Unknown Address',
+                  lat: parseFloat(data.lat),
+                  lng: parseFloat(data.lon)
+              };
+          } else if (query && data.length > 0) { // Forward geocoding
+              return {
+                  address: data[0].display_name || 'Unknown Address',
+                  lat: parseFloat(data[0].lat),
+                  lng: parseFloat(data[0].lon)
+              };
+          } else {
+              return { address: 'Address not found', lat: null, lng: null };
+          }
+      } catch (error) {
+          console.error("Geocoding error:", error);
+          return { address: 'Geocoding failed', lat: null, lng: null };
+      }
+  }
+
+  function startLocationTracking() {
+      if (!navigator.geolocation) {
+          showAlert('Geolocation is not supported by your browser.');
+          return;
+      }
+
+      if (watchId !== null) {
+          return;
+      }
+
+      document.getElementById('location-status-text').textContent = 'Active';
+      document.getElementById('location-tracking-status').style.color = '#4CAF50';
+
+      const mapContainer = document.getElementById('map-container');
+      mapContainer.style.display = 'block';
+
+      if (!leafletMap) {
+          leafletMap = L.map('leaflet-map').setView([0, 0], 15);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }).addTo(leafletMap);
+          leafletMarker = L.marker([0, 0]).addTo(leafletMap);
+      }
+
+      const options = {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 3000
+      };
+
+      watchId = navigator.geolocation.watchPosition(
+          async (position) => {
+              const latitude = position.coords.latitude;
+              const longitude = position.coords.longitude;
+              const accuracy = position.coords.accuracy;
+
+              document.getElementById('latitude').textContent = latitude.toFixed(6);
+              document.getElementById('longitude').textContent = longitude.toFixed(6);
+              document.getElementById('accuracy').textContent = accuracy.toFixed(2);
+              document.getElementById('current-address').textContent = 'Getting address...';
+
+              leafletMap.setView([latitude, longitude]);
+              leafletMarker.setLatLng([latitude, longitude]);
+
+              try {
+                  const geocoded = await reverseGeocode(latitude, longitude);
+                  if (geocoded.address) {
+                      document.getElementById('current-address').textContent = geocoded.address;
+
+                      const activeCheckInSessionId = localStorage.getItem(`currentCheckInSessionId_${currentProfileId}`);
+                      if (activeCheckInSessionId) {
+                          const { error: updateError } = await supabase
+                              .from('daily_activities')
+                              .update({
+                                  location_address: geocoded.address,
+                                  location_lat: latitude,
+                                  location_lng: longitude,
+                                  map_link: `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`
+                              })
+                              .eq('id', activeCheckInSessionId)
+                              .eq('profile_id', currentProfileId);
+
+                          if (updateError) {
+                              console.error('Error updating check-in location:', updateError.message);
+                          }
+                      }
+                  } else {
+                      document.getElementById('current-address').textContent = 'Address not found';
+                  }
+              } catch (error) {
+                  console.error("Reverse geocoding failed:", error);
+                  document.getElementById('current-address').textContent = 'Failed to get address';
+              }
+
+              console.log(`Live Location: Lat ${latitude}, Lon ${longitude}, Accuracy ${accuracy}m`);
+          },
+          (error) => {
+              document.getElementById('location-status-text').textContent = 'Error';
+              document.getElementById('location-tracking-status').style.color = '#F44336';
+
+              let errorMessage = 'Unknown error occurred.';
+              switch (error.code) {
+                  case error.PERMISSION_DENIED:
+                      errorMessage = 'Location access denied by the user. Please enable location for this site in your browser settings.';
+                      break;
+                  case error.POSITION_UNAVAILABLE:
+                      errorMessage = 'Location information is unavailable. Please ensure your device\'s GPS/Location Services are enabled and you have a clear signal.';
+                      break;
+                  case error.TIMEOUT:
+                      errorMessage = 'The request to get user location timed out. Try moving to an area with better signal.';
+                      break;
+              }
+              showAlert('Location tracking error: ' + errorMessage);
+              console.error('Geolocation error:', error);
+              stopLocationTracking();
+          },
+          options
+      );
+  }
+
+  function stopLocationTracking() {
+      if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+          document.getElementById('location-status-text').textContent = 'Inactive';
+          document.getElementById('location-tracking-status').style.color = '#F44336';
+          document.getElementById('latitude').textContent = 'N/A';
+          document.getElementById('longitude').textContent = 'N/A';
+          document.getElementById('accuracy').textContent = 'N/A';
+          document.getElementById('current-address').textContent = 'Location tracking inactive';
+
+          // Update the location of the corresponding Check-Out record
+          // Find the latest Check-Out record for the current user that doesn't have location data yet
+          (async () => {
+              const { data: latestCheckOutRecords, error: fetchError } = await supabase
+                  .from('daily_activities')
+                  .select('id')
+                  .eq('profile_id', currentProfileId)
+                  .eq('type', 'Check-Out')
+                  .is('location_address', null) // Check for null location
+                  .order('timestamp', { ascending: false })
+                  .limit(1);
+
+              if (fetchError) {
+                  console.error('Error fetching latest check-out for location update:', fetchError.message);
+                  return;
+              }
+
+              if (latestCheckOutRecords.length > 0 && document.getElementById('latitude').textContent !== 'N/A') {
+                  const checkOutRecordId = latestCheckOutRecords[0].id;
+                  const lat = parseFloat(document.getElementById('latitude').textContent);
+                  const lng = parseFloat(document.getElementById('longitude').textContent);
+                  const address = document.getElementById('current-address').textContent;
+
+                  const { error: updateError } = await supabase
+                      .from('daily_activities')
+                      .update({
+                          location_address: address,
+                          location_lat: lat,
+                          location_lng: lng,
+                          map_link: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`
+                      })
+                      .eq('id', checkOutRecordId);
+
+                  if (updateError) {
+                      console.error('Error updating check-out location:', updateError.message);
+                  }
+              }
+          })();
+      }
+  }
+
+  // --- Follow Ups ---
+
+  async function getFollowUps() {
+    let query = supabase.from('follow_ups').select('*');
+    if (currentUserRole === 'employee') {
+        query = query.eq('profile_id', currentProfileId);
+    }
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) {
+        console.error('Error fetching follow-ups:', error.message);
+        showAlert('Error fetching follow-ups.');
+        return [];
+    }
+    return data;
+  }
+
+  // No longer needed as data is directly inserted/updated
+  // async function saveFollowUps(followups) {
+  //   // This function is no longer needed
+  // }
+
+  function addFollowUpEntry() {
+    if (!currentProfileId) {
+        showAlert('Please login to add follow-ups.');
+        return;
+    }
+    document.getElementById('followup-subject').focus();
+  }
+
+  document.getElementById('followup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const subject = document.getElementById('followup-subject').value;
+    const datetime = document.getElementById('followup-datetime').value;
+    const note = document.getElementById('followup-note').value;
+    const docId = document.getElementById('followup-doc-id') ? document.getElementById('followup-doc-id').value : '';
+
+    if (docId) {
+      const { error } = await supabase
+        .from('follow_ups')
+        .update({ subject, datetime, note })
+        .eq('id', docId)
+        .eq('profile_id', currentProfileId); // Ensure user can only update their own follow-ups
+
+      if (error) {
+        console.error('Error updating follow-up:', error.message);
+        showAlert('Error updating follow-up.');
+        return;
+      }
+      showAlert('Follow-up updated successfully!');
+    } else {
+      const newFollowUp = {
+        profile_id: currentProfileId,
+        employee_id: currentEmployeeId, // Store employee_id for easier filtering/display
+        subject,
+        datetime,
+        note
+      };
+      const { error } = await supabase
+        .from('follow_ups')
+        .insert(newFollowUp);
+
+    if (insertError) {
+        console.error('Error adding follow-up:', insertError.message);
+        showAlert('Error adding follow-up.');
+        return;
+    }
+    showAlert('Follow-up added successfully!');
+    }
+    document.getElementById('followup-form').reset();
+    if (document.getElementById('followup-doc-id')) document.getElementById('followup-doc-id').value = '';
+    loadFollowUps();
+  });
+
+  async function loadFollowUps() {
+    if (!currentProfileId) return;
+
+    const followupTableBody = document.getElementById('followup-table');
+    followupTableBody.innerHTML = '';
+    const followups = await getFollowUps(); // Fetch from Supabase
+
+    const employeeIdHeader = document.getElementById('followup-employee-id-header');
+    const employeeNameHeader = document.getElementById('followup-employee-name-header');
+    if (currentUserRole === 'admin') {
+        employeeIdHeader.style.display = 'table-cell';
+        employeeNameHeader.style.display = 'table-cell';
+    } else {
+        employeeIdHeader.style.display = 'none';
+        employeeNameHeader.style.display = 'none';
+    }
+
+    if (followups.length === 0) {
+      followupTableBody.innerHTML = '<tr><td colspan="6">No follow-up records found</td></tr>';
+      return;
+    }
+
+    // Fetch all profiles once to map employee_id to name
+    const { data: allProfiles, error: profilesError } = await supabase.from('profiles').select('id, employee_id, name');
+    const profileMap = new Map();
+    if (!profilesError) {
+        allProfiles.forEach(p => profileMap.set(p.id, { employee_id: p.employee_id, name: p.name }));
+    }
+
+    followups.forEach(followup => {
+      const row = followupTableBody.insertRow();
+      const profileInfo = profileMap.get(followup.profile_id) || { employee_id: 'N/A', name: 'N/A' };
+
+      let cellIndex = 0;
+      if (currentUserRole === 'admin') {
+          row.insertCell(cellIndex++).textContent = profileInfo.employee_id;
+          row.insertCell(cellIndex++).textContent = profileInfo.name;
+      }
+      row.insertCell(cellIndex++).textContent = followup.subject;
+      row.insertCell(cellIndex++).textContent = new Date(followup.datetime).toLocaleString();
+      row.insertCell(cellIndex++).textContent = followup.note;
+      const actionsCell = row.insertCell(cellIndex++);
+      actionsCell.innerHTML = `
+        <button onclick="editFollowUp('${followup.id}')">Edit</button>
+        <button onclick="deleteFollowUp('${followup.id}')">Delete</button>
+      `;
+    });
+  }
+
+  async function editFollowUp(docId) {
+    const { data: followup, error } = await supabase
+        .from('follow_ups')
+        .select('*')
+        .eq('id', docId)
+        .eq('profile_id', currentProfileId) // Ensure user can only edit their own
+        .single();
+
+    if (error || !followup) {
+      console.error('Error fetching follow-up for edit:', error?.message || 'Follow-up not found.');
+      showAlert('Follow-up not found or you do not have permission to edit it.');
+      return;
+    }
+
+    let docIdInput = document.getElementById('followup-doc-id');
+    if (!docIdInput) {
+      docIdInput = document.createElement('input');
+      docIdInput.type = 'hidden';
+      docIdInput.id = 'followup-doc-id';
+      document.getElementById('followup-form').prepend(docIdInput);
+    }
+    docIdInput.value = followup.id;
+    document.getElementById('followup-subject').value = followup.subject;
+    document.getElementById('followup-datetime').value = new Date(followup.datetime).toISOString().slice(0, 16); // Format for datetime-local input
+    document.getElementById('followup-note').value = followup.note;
+    showAlert('Fields populated for editing. Click "Save Follow-Up" to update.');
+  }
+
+  function deleteFollowUp(docId) {
+    showConfirm('Are you sure you want to delete this follow-up?', async (confirmed) => {
+      if (confirmed) {
+        const { error } = await supabase
+            .from('follow_ups')
+            .delete()
+            .eq('id', docId)
+            .eq('profile_id', currentProfileId); // Ensure user can only delete their own
+
+        if (error) {
+            console.error('Error deleting follow-up:', error.message);
+            showAlert('Error deleting follow-up or you do not have permission.');
+            return;
+        }
+        showAlert('Follow-up deleted successfully!');
+        loadFollowUps();
+      }
+    });
+  }
+
+  // --- State Management ---
+
+  async function getStates() {
+    const { data, error } = await supabase.from('states').select('*').order('name', { ascending: true });
+    if (error) {
+        console.error('Error fetching states:', error.message);
+        showAlert('Error fetching states.');
+        return [];
+    }
+    return data;
+  }
+
+  // No longer needed as data is directly inserted/updated
+  // async function saveStatesData(states) {
+  //   // This function is no longer needed
+  // }
+
+  document.getElementById('state-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const stateNameInput = document.getElementById('state-name');
+    const stateName = stateNameInput.value.trim();
+
+    if (!stateName) {
+      showAlert('State Name cannot be empty.');
+      return;
+    }
+
+    // Check if state already exists
+    const { data: existingStates, error: checkError } = await supabase
+        .from('states')
+        .select('id')
+        .ilike('name', stateName); // Case-insensitive check
+
+    if (checkError) {
+        console.error('Error checking existing state:', checkError.message);
+        showAlert('Error checking existing state.');
+        return;
+    }
+    if (existingStates.length > 0) {
+      showAlert('State with this name already exists!');
+      return;
+    }
+
+    const newState = { name: stateName };
+    const { error: insertError } = await supabase.from('states').insert(newState);
+
+    if (insertError) {
+        console.error('Error adding state:', insertError.message);
+        showAlert('Error adding state.');
+        return;
+    }
+    showAlert('State added successfully!');
+    stateNameInput.value = '';
+    loadStates();
+  });
+
+  async function loadStates() {
+    const stateTableBody = document.getElementById('state-table');
+    stateTableBody.innerHTML = '';
+    const states = await getStates(); // Fetch from Supabase
+
+    if (states.length === 0) {
+      stateTableBody.innerHTML = '<tr><td colspan="2">No states found</td></tr>';
+      return;
+    }
+
+    states.forEach(state => {
+      const row = stateTableBody.insertRow();
+      row.insertCell(0).textContent = state.name;
+      const actionsCell = row.insertCell(1);
+      actionsCell.innerHTML = `
+        <button onclick="editState('${state.id}', '${state.name}')">Edit</button>
+        <button onclick="deleteState('${state.id}')">Delete</button>
+      `;
+    });
+  }
+
+  async function editState(docId, currentName) {
+    showConfirm(`Edit state name from "${currentName}"?`, async (confirmed) => {
+      if (confirmed) {
+        const newName = prompt('Enter new name for the state:', currentName);
+        if (newName && newName.trim() !== '' && newName.trim().toLowerCase() !== currentName.toLowerCase()) {
+          // Check if new name already exists for another state
+          const { data: existingStates, error: checkError } = await supabase
+              .from('states')
+              .select('id')
+              .ilike('name', newName.trim())
+              .neq('id', docId);
+
+          if (checkError) {
+              console.error('Error checking new state name:', checkError.message);
+              showAlert('Error checking new state name.');
+              return;
+          }
+          if (existingStates.length > 0) {
+            showAlert('State with this new name already exists!');
+            return;
+          }
+
+          const { error: updateError } = await supabase
+              .from('states')
+              .update({ name: newName.trim() })
+              .eq('id', docId);
+
+          if (updateError) {
+              console.error('Error updating state:', updateError.message);
+              showAlert('Error updating state.');
+              return;
+          }
+          showAlert('State updated successfully!');
+          loadStates();
+
+          // Update stateName in cities table
+          const { error: updateCitiesError } = await supabase
+              .from('cities')
+              .update({ state_name: newName.trim() }) // Assuming you have a state_name column in cities
+              .eq('state_id', docId);
+
+          if (updateCitiesError) {
+              console.error('Error updating cities with new state name:', updateCitiesError.message);
+          }
+
+        } else if (newName !== null) {
+          showAlert('State name not changed or invalid.');
+        }
+      }
+    });
+  }
+
+  function deleteState(docId) {
+    showConfirm('Are you sure you want to delete this state? This will also delete all cities associated with it.', async (confirmed) => {
+      if (confirmed) {
+        // Delete associated cities first
+        const { error: deleteCitiesError } = await supabase
+            .from('cities')
+            .delete()
+            .eq('state_id', docId);
+
+        if (deleteCitiesError) {
+            console.error('Error deleting associated cities:', deleteCitiesError.message);
+            showAlert('Error deleting associated cities.');
+            return;
+        }
+
+        // Then delete the state
+        const { error: deleteStateError } = await supabase
+            .from('states')
+            .delete()
+            .eq('id', docId);
+
+        if (deleteStateError) {
+            console.error('Error deleting state:', deleteStateError.message);
+            showAlert('Error deleting state.');
+            return;
+        }
+
+        showAlert('State and associated cities deleted successfully!');
+        loadStates();
+      }
+    });
+  }
+
+  async function searchState() {
+    const searchTerm = document.getElementById('search-state').value.toLowerCase();
+    const stateTableBody = document.getElementById('state-table');
+    stateTableBody.innerHTML = '';
+
+    let query = supabase.from('states').select('*');
+    if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+    }
+    const { data: filteredStates, error } = await query.order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error searching states:', error.message);
+        showAlert('Error searching states.');
+        return;
+    }
+
+    if (filteredStates.length === 0) {
+      stateTableBody.innerHTML = '<tr><td colspan="2">No matching states found</td></tr>';
+      return;
+    }
+
+    filteredStates.forEach(state => {
+      const row = stateTableBody.insertRow();
+      row.insertCell(0).textContent = state.name;
+      const actionsCell = row.insertCell(1);
+      actionsCell.innerHTML = `
+        <button onclick="editState('${state.id}', '${state.name}')">Edit</button>
+        <button onclick="deleteState('${state.id}')">Delete</button>
+      `;
+    });
+  }
+
+  // --- City Management ---
+
+  async function getCities() {
+    const { data, error } = await supabase
+        .from('cities')
+        .select('*, states(name)') // Select city data and join state name
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching cities:', error.message);
+        showAlert('Error fetching cities.');
+        return [];
+    }
+    // Map the joined state name to a more accessible property
+    return data.map(city => ({
+        ...city,
+        state_name: city.states ? city.states.name : 'N/A' // Use 'states' object from join
+    }));
+  }
+
+  // No longer needed as data is directly inserted/updated
+  // async function saveCitiesData(cities) {
+  //   // This function is no longer needed
+  // }
+
+  async function loadStatesForCitySelect() {
+    const stateSelect = document.getElementById('state-select');
+    stateSelect.innerHTML = '<option value="">-- Select State --</option>';
+    const states = await getStates(); // Fetch from Supabase
+
+    states.forEach(state => {
+      const option = document.createElement('option');
+      option.value = state.id;
+      option.textContent = state.name;
+      stateSelect.appendChild(option);
+    });
+  }
+
+  document.getElementById('city-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const stateSelect = document.getElementById('state-select');
+    const selectedStateId = stateSelect.value;
+    const selectedStateName = stateSelect.options[stateSelect.selectedIndex].textContent; // Get name for storage
+
+    const cityNameInput = document.getElementById('city-name');
+    const cityName = cityNameInput.value.trim();
+
+    if (!selectedStateId || !cityName) {
+      showAlert('Please select a State and enter a City Name.');
+      return;
+    }
+
+    // Check if city already exists in this state
+    const { data: existingCities, error: checkError } = await supabase
+        .from('cities')
+        .select('id')
+        .eq('state_id', selectedStateId)
+        .ilike('name', cityName);
+
+    if (checkError) {
+        console.error('Error checking existing city:', checkError.message);
+        showAlert('Error checking existing city.');
+        return;
+    }
+    if (existingCities.length > 0) {
+      showAlert('City with this name already exists in the selected state!');
+      return;
+    }
+
+    const newCity = {
+      state_id: selectedStateId,
+      name: cityName,
+      state_name: selectedStateName // Store state name for easier display/search
+    };
+    const { error: insertError } = await supabase.from('cities').insert(newCity);
+
+    if (insertError) {
+        console.error('Error adding city:', insertError.message);
+        showAlert('Error adding city.');
+        return;
+    }
+    showAlert('City added successfully!');
+    cityNameInput.value = '';
+    stateSelect.value = '';
+    loadCities();
+  });
+
+  async function loadCities() {
+    const cityTableBody = document.getElementById('city-table');
+    cityTableBody.innerHTML = '';
+    const cities = await getCities(); // Fetch from Supabase
+
+    if (cities.length === 0) {
+      cityTableBody.innerHTML = '<tr><td colspan="3">No cities found</td></tr>';
+      return;
+    }
+
+    cities.forEach(city => {
+      const row = cityTableBody.insertRow();
+      row.insertCell(0).textContent = city.state_name; // Use state_name from joined data
+      row.insertCell(1).textContent = city.name;
+      const actionsCell = row.insertCell(2);
+      actionsCell.innerHTML = `
+        <button onclick="editCity('${city.id}', '${city.state_id}', '${city.name}')">Edit</button>
+        <button onclick="deleteCity('${city.id}')">Delete</button>
+      `;
+    });
+  }
+
+  async function editCity(docId, currentStateId, currentCityName) {
+    showConfirm(`Edit city name from "${currentCityName}"?`, async (confirmed) => {
+      if (confirmed) {
+        const newCityName = prompt('Enter new name for the city:', currentCityName);
+        if (newCityName && newCityName.trim() !== '' && newCityName.trim().toLowerCase() !== currentCityName.toLowerCase()) {
+          // Check if new city name already exists in the same state for another city
+          const { data: existingCities, error: checkError } = await supabase
+              .from('cities')
+              .select('id')
+              .eq('state_id', currentStateId)
+              .ilike('name', newCityName.trim())
+              .neq('id', docId);
+
+          if (checkError) {
+              console.error('Error checking new city name:', checkError.message);
+              showAlert('Error checking new city name.');
+              return;
+          }
+          if (existingCities.length > 0) {
+            showAlert('City with this new name already exists in the same state!');
+            return;
+          }
+
+          const { error: updateError } = await supabase
+              .from('cities')
+              .update({ name: newCityName.trim() })
+              .eq('id', docId);
+
+          if (updateError) {
+              console.error('Error updating city:', updateError.message);
+              showAlert('Error updating city.');
+              return;
+          }
+          showAlert('City updated successfully!');
+          loadCities();
+        } else if (newCityName !== null) {
+          showAlert('City name not changed or invalid.');
+        }
+      }
+    });
+  }
+
+  function deleteCity(docId) {
+    showConfirm('Are you sure you want to delete this city?', async (confirmed) => {
+      if (confirmed) {
+        const { error } = await supabase
+            .from('cities')
+            .delete()
+            .eq('id', docId);
+
+        if (error) {
+            console.error('Error deleting city:', error.message);
+            showAlert('Error deleting city.');
+            return;
+        }
+        showAlert('City deleted successfully!');
+        loadCities();
+      }
+    });
+  }
+
+  async function searchCity() {
+    const searchTerm = document.getElementById('search-city').value.toLowerCase();
+    const cityTableBody = document.getElementById('city-table');
+    cityTableBody.innerHTML = '';
+
+    let query = supabase.from('cities').select('*, states(name)');
+    if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,state_name.ilike.%${searchTerm}%`); // Search in both city name and stored state name
+    }
+    const { data: filteredCities, error } = await query.order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error searching cities:', error.message);
+        showAlert('Error searching cities.');
+        return;
+    }
+
+    // Map the joined state name to a more accessible property for display
+    const citiesToDisplay = filteredCities.map(city => ({
+        ...city,
+        state_name: city.states ? city.states.name : 'N/A'
+    }));
+
+    if (citiesToDisplay.length === 0) {
+      cityTableBody.innerHTML = '<tr><td colspan="3">No matching cities found</td></tr>';
+      return;
+    }
+
+    citiesToDisplay.forEach(city => {
+      const row = cityTableBody.insertRow();
+      row.insertCell(0).textContent = city.state_name;
+      row.insertCell(1).textContent = city.name;
+      const actionsCell = row.insertCell(2);
+      actionsCell.innerHTML = `
+        <button onclick="editCity('${city.id}', '${city.state_id}', '${city.name}')">Edit</button>
+        <button onclick="deleteCity('${city.id}')">Delete</button>
+      `;
+    });
+  }
+
+  // --- User Profile ---
+
+  async function getUserProfile(employeeIdOrProfileId = currentEmployeeId) {
+    if (!employeeIdOrProfileId) return null;
+
+    let query = supabase.from('profiles').select('*');
+    if (employeeIdOrProfileId.includes('-')) { // Assuming employee_id contains a hyphen (SCS- or ADM-)
+        query = query.eq('employee_id', employeeIdOrProfileId);
+    } else { // Assuming it's a UUID
+        query = query.eq('id', employeeIdOrProfileId);
+    }
+
+    const { data, error } = await query.single();
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+        console.error('Error fetching user profile:', error.message);
+        showAlert('Error fetching user profile.');
+        return null;
+    }
+    return data;
+  }
+
+  async function saveUserProfile(profileData) {
+    if (!profileData.employee_id) {
+        showAlert('Employee ID is required to save profile.');
+        return;
+    }
+
+    // Check if profile exists by employee_id
+    const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('employee_id', profileData.employee_id)
+        .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found
+        console.error('Error checking existing profile:', fetchError.message);
+        showAlert('Error saving profile.');
+        return;
+    }
+
+    if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update(profileData)
+            .eq('id', existingProfile.id);
+        if (updateError) {
+            console.error('Error updating profile:', updateError.message);
+            showAlert('Error updating profile.');
+            return false;
+        }
+    } else {
+        // Insert new profile
+        const { error: insertError } = await supabase
+            .from('profiles')
+            .insert(profileData);
+        if (insertError) {
+            console.error('Error inserting new profile:', insertError.message);
+            showAlert('Error inserting new profile.');
+            return false;
+        }
+    }
+    return true;
+  }
+
+  async function getAllUserProfiles() {
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+        console.error('Error fetching all user profiles:', error.message);
+        showAlert('Error fetching all user profiles.');
+        return [];
+    }
+    return data;
+  }
+
+  async function loadUserProfile() {
+    if (!currentProfileId) {
+        showAlert('Please login to view your profile.');
+        return;
+    }
+    const profile = await getUserProfile(currentProfileId); // Fetch by UUID
+    if (profile) {
+        document.getElementById('profile-name').value = profile.name || '';
+        document.getElementById('profile-employee-id').value = profile.employee_id || '';
+        document.getElementById('profile-mobile-no').value = profile.mobile_no || '';
+        document.getElementById('profile-email-id').value = profile.email_id || '';
+        document.getElementById('profile-password').value = profile.password || '';
+        document.getElementById('profile-preview').src = profile.photo_url || 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/99a20669-ecb4-4325-a970-491b8dac39a9.png';
+
+        updateSidebarProfile(profile.name, profile.employee_id, profile.photo_url);
+    }
+  }
+
+  document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentProfileId) {
+        showAlert('Please login to save your profile.');
+        return;
+    }
+
+    const name = document.getElementById('profile-name').value;
+    const employee_id = document.getElementById('profile-employee-id').value; // Use employee_id
+    const mobile_no = document.getElementById('profile-mobile-no').value;
+    const email_id = document.getElementById('profile-email-id').value;
+    const password = document.getElementById('profile-password').value;
+    const photoFile = document.getElementById('upload-photo').files[0];
+
+    let currentProfile = await getUserProfile(currentProfileId);
+    let photo_url = currentProfile?.photo_url || 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/99a20669-ecb4-4325-a970-491b8dac39a9.png';
+
+    const updatedProfileData = {
+        name,
+        employee_id,
+        mobile_no,
+        email_id,
+        password,
+        photo_url, // Will be updated if photoFile exists
+        role: currentProfile.role // Keep existing role
+    };
+
+    if (photoFile) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        updatedProfileData.photo_url = event.target.result;
+        const success = await saveUserProfileToSupabase(currentProfileId, updatedProfileData);
+        if (success) {
+            showAlert('Profile saved successfully!');
+            updateSidebarProfile(name, employee_id, updatedProfileData.photo_url);
+        }
+      };
+      reader.readAsDataURL(photoFile);
+    } else {
+      const success = await saveUserProfileToSupabase(currentProfileId, updatedProfileData);
+      if (success) {
+          showAlert('Profile saved successfully!');
+          updateSidebarProfile(name, employee_id, photo_url);
+      }
+    }
+  });
+
+  // Helper function to save profile to Supabase by profile_id
+  async function saveUserProfileToSupabase(profileId, data) {
+      const { error } = await supabase
+          .from('profiles')
+          .update(data)
+          .eq('id', profileId);
+      if (error) {
+          console.error('Error saving profile to Supabase:', error.message);
+          showAlert('Error saving profile.');
+          return false;
+      }
+      return true;
+  }
+
+
+  document.getElementById('upload-photo').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('profile-preview').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  async function updateSidebarProfile() {
+    if (!currentProfileId) return; // Ensure a user is logged in
+
+    const profile = await getUserProfile(currentProfileId); // Fetch current user's profile
+    if (profile) {
+        if (profile.role === 'admin') {
+            const displayName = profile.name || profile.employee_id.replace('ADM-', '') || "Admin User";
+            document.getElementById('sidebar-employee-name').textContent = displayName;
+            document.getElementById('sidebar-employee-id').textContent = profile.employee_id;
+        } else {
+            document.getElementById('sidebar-employee-name').textContent = profile.name || "Employee Name";
+            document.getElementById('sidebar-employee-id').textContent = profile.employee_id || "EMP-ID";
+        }
+        document.getElementById('sidebar-profile-photo').src = profile.photo_url || 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b480eacc-40ca-4251-4c52-b6c5587b3aa7.png';
+    }
+  }
+
+  // --- Admin Profile Management ---
+  async function loadAdminDetails() {
+      if (currentUserRole !== 'admin') {
+          document.getElementById('admin-details-table').innerHTML = '<tr><td colspan="5">Access Denied</td></tr>';
+          return;
+      }
+
+      const adminTableBody = document.getElementById('admin-details-table');
+      adminTableBody.innerHTML = '';
+
+      const { data: allAdminProfiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'admin')
+          .order('employee_id', { ascending: true });
+
+      if (error) {
+          console.error('Error fetching admin profiles:', error.message);
+          showAlert('Error fetching admin profiles.');
+          return;
+      }
+
+      if (allAdminProfiles.length === 0) {
+          adminTableBody.innerHTML = '<tr><td colspan="5">No admin profiles found. Please ensure at least one admin logs in to create their profile.</td></tr>';
+          return;
+      }
+
+      allAdminProfiles.forEach(adminProfile => {
+          const row = adminTableBody.insertRow();
+          row.insertCell(0).textContent = adminProfile.employee_id || 'N/A';
+          row.insertCell(1).textContent = adminProfile.name || adminProfile.employee_id.replace('ADM-', '') || 'Admin User';
+          row.insertCell(2).textContent = adminProfile.mobile_no || 'N/A';
+          row.insertCell(3).textContent = adminProfile.email_id || 'N/A';
+          const actionsCell = row.insertCell(4);
+          actionsCell.innerHTML = `
+              <button onclick="adminEditProfile('${adminProfile.id}')">Edit</button>
+              <button onclick="adminDeleteProfile('${adminProfile.id}')">Delete</button>
+          `;
+      });
+  }
+
+  // --- Employee Management (Admin Only - for non-admin employees) ---
+  async function loadEmployeeDetails() {
+      if (currentUserRole !== 'admin') {
+          document.getElementById('employee-details-table').innerHTML = '<tr><td colspan="5">Access Denied</td></tr>';
+          return;
+      }
+
+      const employeeTableBody = document.getElementById('employee-details-table');
+      employeeTableBody.innerHTML = '';
+
+      const { data: nonAdminEmployeeProfiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'employee')
+          .order('employee_id', { ascending: true });
+
+      if (error) {
+          console.error('Error fetching employee profiles:', error.message);
+          showAlert('Error fetching employee profiles.');
+          return;
+      }
+
+      if (nonAdminEmployeeProfiles.length === 0) {
+          employeeTableBody.innerHTML = '<tr><td colspan="5">No employee profiles found.</td></tr>';
+          return;
+      }
+
+      nonAdminEmployeeProfiles.forEach(profile => {
+          const row = employeeTableBody.insertRow();
+          row.insertCell(0).textContent = profile.employee_id || 'N/A';
+          row.insertCell(1).textContent = profile.name || 'N/A';
+          row.insertCell(2).textContent = profile.mobile_no || 'N/A';
+          row.insertCell(3).textContent = profile.email_id || 'N/A';
+          const actionsCell = row.insertCell(4);
+          actionsCell.innerHTML = `
+              <button onclick="adminEditProfile('${profile.id}')">Edit</button>
+              <button onclick="adminDeleteProfile('${profile.id}')">Delete</button>
+          `;
+      });
+  }
+
+  async function adminEditProfile(profileId) {
+      if (currentUserRole !== 'admin') {
+          showAlert('Access Denied.');
+          return;
+      }
+      const profile = await getUserProfile(profileId); // Fetch by UUID
+      if (!profile) {
+          showAlert('Profile not found.');
+          return;
+      }
+
+      const newName = prompt(`Edit name for ${profile.employee_id}:`, profile.name);
+      if (newName !== null && newName.trim() !== '') {
+          profile.name = newName.trim();
+      }
+
+      const newMobile = prompt(`Edit mobile number for ${profile.employee_id}:`, profile.mobile_no);
+      if (newMobile !== null && newMobile.trim() !== '') {
+          profile.mobile_no = newMobile.trim();
+      }
+
+      const newEmail = prompt(`Edit email for ${profile.employee_id}:`, profile.email_id);
+      if (newEmail !== null && newEmail.trim() !== '') {
+          profile.email_id = newEmail.trim();
+      }
+
+      const { error } = await supabase
+          .from('profiles')
+          .update({
+              name: profile.name,
+              mobile_no: profile.mobile_no,
+              email_id: profile.email_id
+          })
+          .eq('id', profileId);
+
+      if (error) {
+          console.error('Error updating profile:', error.message);
+          showAlert('Error updating profile.');
+          return;
+      }
+      showAlert('Profile updated successfully!');
+      if (profile.role === 'admin') {
+          loadAdminDetails();
+      } else {
+          loadEmployeeDetails();
+      }
+  }
+
+  function openAddEmployeeModal() {
+    if (currentUserRole !== 'admin') {
+      showAlert('Only administrators can add new employees');
+      return;
+    }
+    document.getElementById('addEmployeeModal').style.display = 'flex';
+    document.getElementById('add-employee-form').reset();
+  }
+
+  function closeAddEmployeeModal() {
+    document.getElementById('addEmployeeModal').style.display = 'none';
+    document.getElementById('add-employee-form').reset();
+  }
+
+  document.getElementById('add-employee-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const employee_id = document.getElementById('new-employee-id').value.trim().toUpperCase();
+    const name = document.getElementById('new-employee-name').value.trim();
+    const mobile_no = document.getElementById('new-employee-mobile').value.trim();
+    const email_id = document.getElementById('new-employee-email').value.trim();
+    const password = document.getElementById('new-employee-password').value;
+
+    if (!/^SCS-\d{5,6}$/.test(employee_id)) {
+      showAlert('Employee ID must be in format SCS- followed by 5 or 6 digits (e.g., SCS-12345 or SCS-123456).');
+      return;
+    }
+
+    // Check if employee_id already exists
+    const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('employee_id', employee_id);
+
+    if (checkError) {
+        console.error('Error checking existing employee ID:', checkError.message);
+        showAlert('Error adding employee.');
+        return;
+    }
+    if (existingProfile.length > 0) {
+      showAlert('An employee with this ID already exists!');
+      return;
+    }
+
+    const newProfile = {
+      employee_id,
+      name,
+      mobile_no,
+      email_id,
+      password,
+      photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png',
+      role: 'employee'
+    };
+
+    const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+
+    if (insertError) {
+      console.error('Error adding employee:', insertError.message);
+      showAlert('Error adding employee.');
+      return;
+    }
+
+    showAlert(`Employee ${employee_id} added successfully!`);
+    closeAddEmployeeModal();
+    loadEmployeeDetails();
+    populateEmployeeFilter();
+  });
+
+  // --- Admin Management (Add Admin Modal) ---
+  function openAddAdminModal() {
+    if (currentUserRole !== 'admin') {
+      showAlert('Only administrators can add new admins.');
+      return;
+    }
+    document.getElementById('addAdminModal').style.display = 'flex';
+    document.getElementById('add-admin-form').reset();
+  }
+
+  function closeAddAdminModal() {
+    document.getElementById('addAdminModal').style.display = 'none';
+    document.getElementById('add-admin-form').reset();
+  }
+
+  document.getElementById('add-admin-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const employee_id = document.getElementById('new-admin-username').value.trim().toUpperCase(); // Using employee_id for admin username
+    const name = document.getElementById('new-admin-name').value.trim();
+    const mobile_no = document.getElementById('new-admin-mobile').value.trim();
+    const email_id = document.getElementById('new-admin-email').value.trim();
+    const password = document.getElementById('new-admin-password').value;
+
+    if (!/^ADM-[A-Za-z\s]+$/.test(employee_id)) {
+      showAlert('Admin Username must be in format ADM- followed by letters and spaces (e.g., ADM-JohnDoe).');
+      return;
+    }
+
+    // Check if the username is already in the allowedAdminUsernames array (hardcoded)
+    if (allowedAdminUsernames.includes(employee_id)) {
+        showAlert('This Admin Username is already pre-defined in the system.');
+        return;
+    }
+
+    // Check if a profile with this username already exists in Supabase
+    const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('employee_id', employee_id);
+
+    if (checkError) {
+        console.error('Error checking existing admin ID:', checkError.message);
+        showAlert('Error adding admin.');
+        return;
+    }
+    if (existingProfile.length > 0) {
+      showAlert('An admin with this username already exists!');
+      return;
+    }
+
+    const newAdminProfile = {
+      employee_id,
+      name,
+      mobile_no,
+      email_id,
+      password,
+      photo_url: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/default-employee.png',
+      role: 'admin'
+    };
+
+    const { error: insertError } = await supabase.from('profiles').insert(newAdminProfile);
+
+    if (insertError) {
+      console.error('Error adding admin:', insertError.message);
+      showAlert('Error adding admin.');
+      return;
+    }
+
+    showAlert(`Admin ${employee_id} added successfully!`);
+    closeAddAdminModal();
+    loadAdminDetails();
+  });
+
+
+  async function adminDeleteProfile(profileId) {
+      if (currentUserRole !== 'admin') {
+          showAlert('Access Denied.');
+          return;
+      }
+
+      const profileToDelete = await getUserProfile(profileId);
+      if (!profileToDelete) {
+          showAlert('Profile not found.');
+          return;
+      }
+
+      if (profileToDelete.id === currentProfileId) {
+          showAlert('You cannot delete the currently logged-in Admin profile from this interface.');
+          return;
+      }
+
+      // For hardcoded admins, prevent deletion from this UI
+      if (profileToDelete.role === 'admin' && allowedAdminUsernames.includes(profileToDelete.employee_id)) {
+          showAlert('Pre-defined Admin profiles cannot be deleted from this section. They are hardcoded.');
+          return;
+      }
+
+      showConfirm(`Are you sure you want to delete ${profileToDelete.role} ${profileToDelete.employee_id} and all their associated data (attendance, visits, follow-ups)?`, async (confirmed) => {
+          if (confirmed) {
+              // Delete associated daily activities
+              const { error: deleteActivitiesError } = await supabase
+                  .from('daily_activities')
+                  .delete()
+                  .eq('profile_id', profileId);
+              if (deleteActivitiesError) {
+                  console.error('Error deleting associated daily activities:', deleteActivitiesError.message);
+                  showAlert('Error deleting associated data.');
+                  return;
+              }
+
+              // Delete associated follow-ups
+              const { error: deleteFollowUpsError } = await supabase
+                  .from('follow_ups')
+                  .delete()
+                  .eq('profile_id', profileId);
+              if (deleteFollowUpsError) {
+                  console.error('Error deleting associated follow-ups:', deleteFollowUpsError.message);
+                  showAlert('Error deleting associated data.');
+                  return;
+              }
+
+              // Finally, delete the profile
+              const { error: deleteProfileError } = await supabase
+                  .from('profiles')
+                  .delete()
+                  .eq('id', profileId);
+
+              if (deleteProfileError) {
+                  console.error('Error deleting profile:', deleteProfileError.message);
+                  showAlert('Error deleting profile.');
+                  return;
+              }
+
+              showAlert(`${profileToDelete.role} ${profileToDelete.employee_id} and all their data deleted successfully!`);
+              if (profileToDelete.role === 'admin') {
+                  loadAdminDetails();
+              } else {
+                  loadEmployeeDetails();
+                  populateEmployeeFilter();
+              }
+          }
+      });
+  }
+</script>
+
+</body>
+</html>
